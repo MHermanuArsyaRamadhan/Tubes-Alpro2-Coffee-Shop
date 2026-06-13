@@ -10,9 +10,17 @@ type Menu struct {
 	Kategori  string
 	Harga     int
 	Komposisi string
-	Tersedia  bool
+	Stok      int
 }
 
+type ItemOrder struct {
+	NamaMenu    string
+	Jumlah      int
+	HargaSatuan int
+	Subtotal    int
+}
+
+// Hanya 3 ini yang benar-benar global karena diakses dan dimodifikasi oleh banyak fungsi
 var dataMenu [MAX_MENU]Menu
 var jumlahMenu int
 var nextID int = 1
@@ -34,6 +42,8 @@ func main() {
 		fmt.Println("7. Urutkan harga dengan Selection Sort")
 		fmt.Println("8. Urutkan harga dengan Insertion Sort")
 		fmt.Println("9. Statistik menu")
+		fmt.Println("10. Order menu")
+		fmt.Println("11. Ubah stok menu")
 		fmt.Println("0. Keluar")
 		fmt.Println("Contoh input pilihan: 1")
 		fmt.Print("Pilih menu: ")
@@ -58,6 +68,10 @@ func main() {
 			tampilkanInsertionSortHarga()
 		case 9:
 			tampilkanStatistik()
+		case 10:
+			orderMenu()
+		case 11:
+			ubahStokMenu()
 		case 0:
 			fmt.Println("Terima kasih sudah menggunakan Cafe-Menu.")
 			return
@@ -69,28 +83,28 @@ func main() {
 
 // Fungsi ini mengisi data awal agar program sudah memiliki contoh menu saat pertama dijalankan.
 func isiDataAwal() {
-	tambahDataAwal("Americano", "coffee", 18000, "espresso_air_panas", true)
-	tambahDataAwal("Cappuccino", "coffee", 25000, "espresso_susu_foam", true)
-	tambahDataAwal("Cafe_Latte", "coffee", 24000, "espresso_susu", true)
-	tambahDataAwal("Matcha_Latte", "non-coffee", 26000, "matcha_susu_gula", true)
-	tambahDataAwal("Chocolate_Ice", "non-coffee", 22000, "cokelat_susu_es", true)
-	tambahDataAwal("French_Fries", "snack", 20000, "kentang_garam_saus", true)
-	tambahDataAwal("Chicken_Sandwich", "food", 32000, "roti_ayam_selada_saus", false)
+	tambahDataAwal("Americano", "coffee", 18000, "espresso_air_panas", 10)
+	tambahDataAwal("Cappuccino", "coffee", 25000, "espresso_susu_foam", 8)
+	tambahDataAwal("Cafe_Latte", "coffee", 24000, "espresso_susu", 5)
+	tambahDataAwal("Matcha_Latte", "non-coffee", 26000, "matcha_susu_gula", 7)
+	tambahDataAwal("Chocolate_Ice", "non-coffee", 22000, "cokelat_susu_es", 6)
+	tambahDataAwal("French_Fries", "snack", 20000, "kentang_garam_saus", 15)
+	tambahDataAwal("Chicken_Sandwich", "food", 32000, "roti_ayam_selada_saus", 0)
 }
 
 // Fungsi ini menambahkan data awal ke array dataMenu tanpa menggunakan append.
-func tambahDataAwal(nama string, kategori string, harga int, komposisi string, tersedia bool) {
+func tambahDataAwal(namaBaru string, kategoriBaru string, hargaBaru int, komposisiBaru string, stokBaru int) {
 	if jumlahMenu >= MAX_MENU {
 		return
 	}
 
 	dataMenu[jumlahMenu] = Menu{
 		ID:        nextID,
-		Nama:      nama,
-		Kategori:  kategori,
-		Harga:     harga,
-		Komposisi: komposisi,
-		Tersedia:  tersedia,
+		Nama:      namaBaru,
+		Kategori:  kategoriBaru,
+		Harga:     hargaBaru,
+		Komposisi: komposisiBaru,
+		Stok:      stokBaru,
 	}
 
 	jumlahMenu++
@@ -99,8 +113,11 @@ func tambahDataAwal(nama string, kategori string, harga int, komposisi string, t
 
 // Fungsi ini digunakan untuk menambahkan menu baru berdasarkan input dari user.
 func tambahMenu() {
-	var nama, kategori, komposisi string
-	var harga, status int
+	var nama string
+	var kategori string
+	var komposisi string
+	var harga int
+	var stok int
 
 	if jumlahMenu >= MAX_MENU {
 		fmt.Println("Data menu sudah penuh.")
@@ -129,10 +146,10 @@ func tambahMenu() {
 	fmt.Print("Komposisi: ")
 	fmt.Scan(&komposisi)
 
-	fmt.Println("\nContoh status: 1")
-	fmt.Println("Keterangan: 1 = tersedia, 0 = habis")
-	fmt.Print("Tersedia? ")
-	fmt.Scan(&status)
+	fmt.Println("\nContoh stok: 10")
+	fmt.Println("Keterangan: 0 = habis, angka positif = jumlah stok tersedia")
+	fmt.Print("Stok: ")
+	fmt.Scan(&stok)
 
 	dataMenu[jumlahMenu] = Menu{
 		ID:        nextID,
@@ -140,7 +157,7 @@ func tambahMenu() {
 		Kategori:  kategori,
 		Harga:     harga,
 		Komposisi: komposisi,
-		Tersedia:  status == 1,
+		Stok:      stok,
 	}
 
 	jumlahMenu++
@@ -157,27 +174,30 @@ func tampilkanSemuaMenu() {
 
 // Fungsi ini menampilkan data menu dalam bentuk tabel yang lebih rapi.
 func tampilkanDaftar(daftar [MAX_MENU]Menu, jumlah int) {
+	var i int
+
 	if jumlah == 0 {
 		fmt.Println("Belum ada data menu.")
 		return
 	}
 
-	fmt.Println("+----+--------------------+--------------+----------+-----------+------------------------------+")
-	fmt.Println("| ID | Nama Menu          | Kategori     | Harga    | Status    | Komposisi                    |")
-	fmt.Println("+----+--------------------+--------------+----------+-----------+------------------------------+")
+	fmt.Println("+----+--------------------+--------------+----------+-------+-----------+------------------------------+")
+	fmt.Println("| ID | Nama Menu          | Kategori     | Harga    | Stok  | Status    | Komposisi                    |")
+	fmt.Println("+----+--------------------+--------------+----------+-------+-----------+------------------------------+")
 
-	for i := 0; i < jumlah; i++ {
-		fmt.Printf("| %-2d | %-18s | %-12s | Rp%-6d | %-9s | %-28s |\n",
+	for i = 0; i < jumlah; i++ {
+		fmt.Printf("| %-2d | %-18s | %-12s | Rp%-6d | %-5d | %-9s | %-28s |\n",
 			daftar[i].ID,
 			potongTeks(daftar[i].Nama, 18),
 			potongTeks(daftar[i].Kategori, 12),
 			daftar[i].Harga,
-			statusTeks(daftar[i].Tersedia),
+			daftar[i].Stok,
+			statusTeks(daftar[i].Stok),
 			potongTeks(daftar[i].Komposisi, 28),
 		)
 	}
 
-	fmt.Println("+----+--------------------+--------------+----------+-----------+------------------------------+")
+	fmt.Println("+----+--------------------+--------------+----------+-------+-----------+------------------------------+")
 }
 
 // Fungsi ini memotong teks yang terlalu panjang agar tabel tetap tertata.
@@ -193,19 +213,21 @@ func potongTeks(teks string, batas int) string {
 	return teks[:batas-3] + "..."
 }
 
-// Fungsi ini mengubah nilai boolean menjadi teks agar status menu mudah dibaca.
-func statusTeks(tersedia bool) string {
-	if tersedia {
-		return "Tersedia"
+// Fungsi ini mengubah nilai stok menjadi teks status agar mudah dibaca.
+func statusTeks(stokItem int) string {
+	if stokItem <= 0 {
+		return "Habis"
 	}
 
-	return "Habis"
+	return "Tersedia"
 }
 
 // Fungsi ini mencari posisi index menu berdasarkan ID.
-func cariIndexByID(id int) int {
-	for i := 0; i < jumlahMenu; i++ {
-		if dataMenu[i].ID == id {
+func cariIndexByID(idCari int) int {
+	var i int
+
+	for i = 0; i < jumlahMenu; i++ {
+		if dataMenu[i].ID == idCari {
 			return i
 		}
 	}
@@ -215,8 +237,13 @@ func cariIndexByID(id int) int {
 
 // Fungsi ini digunakan untuk mengubah data menu berdasarkan ID yang dipilih user.
 func ubahMenu() {
-	var nama, kategori, komposisi string
-	var id, harga, status int
+	var id int
+	var index int
+	var nama string
+	var kategori string
+	var komposisi string
+	var harga int
+	var stok int
 
 	if jumlahMenu == 0 {
 		fmt.Println("Belum ada data menu.")
@@ -230,7 +257,7 @@ func ubahMenu() {
 	fmt.Print("Masukkan ID menu yang ingin diubah: ")
 	fmt.Scan(&id)
 
-	index := cariIndexByID(id)
+	index = cariIndexByID(id)
 
 	if index == -1 {
 		fmt.Println("Menu tidak ditemukan.")
@@ -256,23 +283,26 @@ func ubahMenu() {
 	fmt.Print("Komposisi: ")
 	fmt.Scan(&komposisi)
 
-	fmt.Println("\nContoh status baru: 1")
-	fmt.Println("Keterangan: 1 = tersedia, 0 = habis")
-	fmt.Print("Tersedia? ")
-	fmt.Scan(&status)
+	fmt.Println("\nContoh stok baru: 10")
+	fmt.Println("Keterangan: 0 = habis, angka positif = jumlah stok tersedia")
+	fmt.Print("Stok: ")
+	fmt.Scan(&stok)
 
 	dataMenu[index].Nama = nama
 	dataMenu[index].Kategori = kategori
 	dataMenu[index].Harga = harga
 	dataMenu[index].Komposisi = komposisi
-	dataMenu[index].Tersedia = status == 1
+	dataMenu[index].Stok = stok
 
 	fmt.Println("Data menu berhasil diubah.")
 }
 
 // Fungsi ini digunakan untuk menghapus menu berdasarkan ID tanpa menggunakan append.
 func hapusMenu() {
-	var id, konfirmasi int
+	var id int
+	var index int
+	var konfirmasi int
+	var i int
 
 	if jumlahMenu == 0 {
 		fmt.Println("Belum ada data menu.")
@@ -286,7 +316,7 @@ func hapusMenu() {
 	fmt.Print("Masukkan ID menu yang ingin dihapus: ")
 	fmt.Scan(&id)
 
-	index := cariIndexByID(id)
+	index = cariIndexByID(id)
 
 	if index == -1 {
 		fmt.Println("Menu tidak ditemukan.")
@@ -303,7 +333,7 @@ func hapusMenu() {
 		return
 	}
 
-	for i := index; i < jumlahMenu-1; i++ {
+	for i = index; i < jumlahMenu-1; i++ {
 		dataMenu[i] = dataMenu[i+1]
 	}
 
@@ -318,6 +348,7 @@ func sequentialSearchKategori() {
 	var kategoriDicari string
 	var hasil [MAX_MENU]Menu
 	var jumlahHasil int
+	var i int
 
 	if jumlahMenu == 0 {
 		fmt.Println("Belum ada data menu.")
@@ -330,7 +361,7 @@ func sequentialSearchKategori() {
 	fmt.Print("Masukkan kategori yang dicari: ")
 	fmt.Scan(&kategoriDicari)
 
-	for i := 0; i < jumlahMenu; i++ {
+	for i = 0; i < jumlahMenu; i++ {
 		if dataMenu[i].Kategori == kategoriDicari {
 			hasil[jumlahHasil] = dataMenu[i]
 			jumlahHasil++
@@ -351,6 +382,13 @@ func binarySearchKategori() {
 	var kategoriDicari string
 	var hasil [MAX_MENU]Menu
 	var jumlahHasil int
+	var dataTerurut [MAX_MENU]Menu
+	var jumlahData int
+	var kiri int
+	var kanan int
+	var tengah int
+	var posisi int
+	var i int
 
 	if jumlahMenu == 0 {
 		fmt.Println("Belum ada data menu.")
@@ -363,15 +401,15 @@ func binarySearchKategori() {
 	fmt.Print("Masukkan kategori yang dicari: ")
 	fmt.Scan(&kategoriDicari)
 
-	dataTerurut, jumlahData := salinData()
+	dataTerurut, jumlahData = salinData()
 	insertionSortKategori(&dataTerurut, jumlahData)
 
-	kiri := 0
-	kanan := jumlahData - 1
-	posisi := -1
+	kiri = 0
+	kanan = jumlahData - 1
+	posisi = -1
 
 	for kiri <= kanan {
-		tengah := (kiri + kanan) / 2
+		tengah = (kiri + kanan) / 2
 
 		if dataTerurut[tengah].Kategori == kategoriDicari {
 			posisi = tengah
@@ -388,7 +426,7 @@ func binarySearchKategori() {
 		return
 	}
 
-	i := posisi
+	i = posisi
 
 	for i >= 0 && dataTerurut[i].Kategori == kategoriDicari {
 		i--
@@ -408,20 +446,25 @@ func binarySearchKategori() {
 
 // Fungsi ini menyalin data menu ke array baru agar data asli tidak berubah saat proses sorting.
 func salinData() ([MAX_MENU]Menu, int) {
-	var hasil [MAX_MENU]Menu
+	var salinan [MAX_MENU]Menu
+	var i int
 
-	for i := 0; i < jumlahMenu; i++ {
-		hasil[i] = dataMenu[i]
+	for i = 0; i < jumlahMenu; i++ {
+		salinan[i] = dataMenu[i]
 	}
 
-	return hasil, jumlahMenu
+	return salinan, jumlahMenu
 }
 
 // Fungsi ini mengurutkan data berdasarkan kategori menggunakan Insertion Sort untuk kebutuhan Binary Search.
 func insertionSortKategori(daftar *[MAX_MENU]Menu, jumlah int) {
-	for i := 1; i < jumlah; i++ {
-		key := daftar[i]
-		j := i - 1
+	var i int
+	var j int
+	var key Menu
+
+	for i = 1; i < jumlah; i++ {
+		key = daftar[i]
+		j = i - 1
 
 		for j >= 0 && daftar[j].Kategori > key.Kategori {
 			daftar[j+1] = daftar[j]
@@ -434,12 +477,15 @@ func insertionSortKategori(daftar *[MAX_MENU]Menu, jumlah int) {
 
 // Fungsi ini menampilkan data menu yang sudah diurutkan berdasarkan harga menggunakan Selection Sort.
 func tampilkanSelectionSortHarga() {
+	var hasil [MAX_MENU]Menu
+	var jumlahData int
+
 	if jumlahMenu == 0 {
 		fmt.Println("Belum ada data menu.")
 		return
 	}
 
-	hasil, jumlahData := salinData()
+	hasil, jumlahData = salinData()
 	selectionSortHarga(&hasil, jumlahData)
 
 	fmt.Println("\n=== Hasil Selection Sort Harga ===")
@@ -449,16 +495,21 @@ func tampilkanSelectionSortHarga() {
 
 // Fungsi ini mengurutkan harga menu dari termurah ke termahal menggunakan Selection Sort.
 func selectionSortHarga(daftar *[MAX_MENU]Menu, jumlah int) {
-	for i := 0; i < jumlah-1; i++ {
-		indexMin := i
+	var i int
+	var j int
+	var indexMin int
+	var temp Menu
 
-		for j := i + 1; j < jumlah; j++ {
+	for i = 0; i < jumlah-1; i++ {
+		indexMin = i
+
+		for j = i + 1; j < jumlah; j++ {
 			if daftar[j].Harga < daftar[indexMin].Harga {
 				indexMin = j
 			}
 		}
 
-		temp := daftar[i]
+		temp = daftar[i]
 		daftar[i] = daftar[indexMin]
 		daftar[indexMin] = temp
 	}
@@ -466,12 +517,15 @@ func selectionSortHarga(daftar *[MAX_MENU]Menu, jumlah int) {
 
 // Fungsi ini menampilkan data menu yang sudah diurutkan berdasarkan harga menggunakan Insertion Sort.
 func tampilkanInsertionSortHarga() {
+	var hasil [MAX_MENU]Menu
+	var jumlahData int
+
 	if jumlahMenu == 0 {
 		fmt.Println("Belum ada data menu.")
 		return
 	}
 
-	hasil, jumlahData := salinData()
+	hasil, jumlahData = salinData()
 	insertionSortHarga(&hasil, jumlahData)
 
 	fmt.Println("\n=== Hasil Insertion Sort Harga ===")
@@ -481,9 +535,13 @@ func tampilkanInsertionSortHarga() {
 
 // Fungsi ini mengurutkan harga menu dari termurah ke termahal menggunakan Insertion Sort.
 func insertionSortHarga(daftar *[MAX_MENU]Menu, jumlah int) {
-	for i := 1; i < jumlah; i++ {
-		key := daftar[i]
-		j := i - 1
+	var i int
+	var j int
+	var key Menu
+
+	for i = 1; i < jumlah; i++ {
+		key = daftar[i]
+		j = i - 1
 
 		for j >= 0 && daftar[j].Harga > key.Harga {
 			daftar[j+1] = daftar[j]
@@ -499,13 +557,18 @@ func tampilkanStatistik() {
 	var kategoriUnik [MAX_MENU]string
 	var jumlahKategori int
 	var totalHarga int
+	var i int
+	var k int
+	var j int
+	var jumlahPerKategori int
+	var totalPerKategori int
 
 	if jumlahMenu == 0 {
 		fmt.Println("Belum ada data menu.")
 		return
 	}
 
-	for i := 0; i < jumlahMenu; i++ {
+	for i = 0; i < jumlahMenu; i++ {
 		totalHarga += dataMenu[i].Harga
 
 		if !kategoriSudahAda(kategoriUnik, jumlahKategori, dataMenu[i].Kategori) {
@@ -520,30 +583,167 @@ func tampilkanStatistik() {
 
 	fmt.Println("\nJumlah menu dan rata-rata harga per kategori:")
 
-	for i := 0; i < jumlahKategori; i++ {
-		var jumlah, totalKategori int
+	for k = 0; k < jumlahKategori; k++ {
+		jumlahPerKategori = 0
+		totalPerKategori = 0
 
-		for j := 0; j < jumlahMenu; j++ {
-			if dataMenu[j].Kategori == kategoriUnik[i] {
-				jumlah++
-				totalKategori += dataMenu[j].Harga
+		for j = 0; j < jumlahMenu; j++ {
+			if dataMenu[j].Kategori == kategoriUnik[k] {
+				jumlahPerKategori++
+				totalPerKategori += dataMenu[j].Harga
 			}
 		}
 
-		fmt.Println("Kategori:", kategoriUnik[i])
-		fmt.Println("Jumlah menu:", jumlah)
-		fmt.Println("Rata-rata harga: Rp", totalKategori/jumlah)
+		fmt.Println("Kategori:", kategoriUnik[k])
+		fmt.Println("Jumlah menu:", jumlahPerKategori)
+		fmt.Println("Rata-rata harga: Rp", totalPerKategori/jumlahPerKategori)
 		fmt.Println("--------------------------")
 	}
 }
 
 // Fungsi ini mengecek apakah sebuah kategori sudah ada di dalam daftar kategori unik.
-func kategoriSudahAda(daftar [MAX_MENU]string, jumlah int, kategori string) bool {
-	for i := 0; i < jumlah; i++ {
-		if daftar[i] == kategori {
+func kategoriSudahAda(daftar [MAX_MENU]string, jumlah int, kat string) bool {
+	var i int
+
+	for i = 0; i < jumlah; i++ {
+		if daftar[i] == kat {
 			return true
 		}
 	}
 
 	return false
+}
+
+// Fungsi ini digunakan untuk melakukan order satu atau lebih menu sekaligus dan mengurangi stok secara otomatis.
+func orderMenu() {
+	var keranjang [MAX_MENU]ItemOrder
+	var jumlahItem int
+	var totalBayar int
+	var lanjut int
+	var id int
+	var index int
+	var jumlahOrder int
+	var i int
+
+	if jumlahMenu == 0 {
+		fmt.Println("Belum ada data menu.")
+		return
+	}
+
+	jumlahItem = 0
+	totalBayar = 0
+
+	for {
+		tampilkanSemuaMenu()
+
+		fmt.Println("\nContoh ID menu yang ingin dipesan: 1")
+		fmt.Println("Lihat ID pada tabel di atas.")
+		fmt.Print("Masukkan ID menu yang ingin dipesan: ")
+		fmt.Scan(&id)
+
+		index = cariIndexByID(id)
+
+		if index == -1 {
+			fmt.Println("Menu tidak ditemukan.")
+		} else if dataMenu[index].Stok <= 0 {
+			fmt.Println("Maaf, menu ini sedang habis.")
+		} else {
+			fmt.Println("\nContoh jumlah order: 2")
+			fmt.Printf("Stok saat ini: %d\n", dataMenu[index].Stok)
+			fmt.Print("Masukkan jumlah yang ingin dipesan: ")
+			fmt.Scan(&jumlahOrder)
+
+			if jumlahOrder <= 0 {
+				fmt.Println("Jumlah order tidak valid.")
+			} else if jumlahOrder > dataMenu[index].Stok {
+				fmt.Printf("Stok tidak cukup. Stok tersedia: %d\n", dataMenu[index].Stok)
+			} else {
+				keranjang[jumlahItem].NamaMenu = dataMenu[index].Nama
+				keranjang[jumlahItem].Jumlah = jumlahOrder
+				keranjang[jumlahItem].HargaSatuan = dataMenu[index].Harga
+				keranjang[jumlahItem].Subtotal = jumlahOrder * dataMenu[index].Harga
+
+				dataMenu[index].Stok = dataMenu[index].Stok - jumlahOrder
+				totalBayar = totalBayar + keranjang[jumlahItem].Subtotal
+				jumlahItem++
+
+				fmt.Printf("Menu %s x%d berhasil ditambahkan ke keranjang.\n", dataMenu[index].Nama, jumlahOrder)
+			}
+		}
+
+		fmt.Println("\nContoh pilihan: 1")
+		fmt.Println("Keterangan: 1 = tambah menu lagi, 0 = selesai order")
+		fmt.Print("Tambah menu lagi? ")
+		fmt.Scan(&lanjut)
+
+		if lanjut != 1 {
+			break
+		}
+	}
+
+	if jumlahItem == 0 {
+		fmt.Println("Tidak ada item yang dipesan.")
+		return
+	}
+
+	fmt.Println("\n=== Ringkasan Order ===")
+	fmt.Println("+----+--------------------+--------+---------------+--------------+")
+	fmt.Println("| No | Menu               | Jumlah | Harga Satuan  | Subtotal     |")
+	fmt.Println("+----+--------------------+--------+---------------+--------------+")
+
+	for i = 0; i < jumlahItem; i++ {
+		fmt.Printf("| %-2d | %-18s | %-6d | Rp%-11d | Rp%-10d |\n",
+			i+1,
+			potongTeks(keranjang[i].NamaMenu, 18),
+			keranjang[i].Jumlah,
+			keranjang[i].HargaSatuan,
+			keranjang[i].Subtotal,
+		)
+	}
+
+	fmt.Println("+----+--------------------+--------+---------------+--------------+")
+	fmt.Printf("| %-43s | Rp%-10d |\n", "TOTAL", totalBayar)
+	fmt.Println("+----+--------------------+--------+---------------+--------------+")
+	fmt.Println("Order berhasil dicatat.")
+}
+
+// Fungsi ini digunakan untuk mengubah stok menu secara langsung berdasarkan ID.
+func ubahStokMenu() {
+	var id int
+	var index int
+	var stokBaru int
+
+	if jumlahMenu == 0 {
+		fmt.Println("Belum ada data menu.")
+		return
+	}
+
+	tampilkanSemuaMenu()
+
+	fmt.Println("\nContoh ID yang ingin diubah stoknya: 3")
+	fmt.Println("Lihat ID pada tabel di atas.")
+	fmt.Print("Masukkan ID menu yang ingin diubah stoknya: ")
+	fmt.Scan(&id)
+
+	index = cariIndexByID(id)
+
+	if index == -1 {
+		fmt.Println("Menu tidak ditemukan.")
+		return
+	}
+
+	fmt.Printf("\nStok saat ini untuk %s: %d\n", dataMenu[index].Nama, dataMenu[index].Stok)
+	fmt.Println("Contoh stok baru: 20")
+	fmt.Println("Keterangan: 0 = habis, angka positif = jumlah stok tersedia")
+	fmt.Print("Masukkan stok baru: ")
+	fmt.Scan(&stokBaru)
+
+	if stokBaru < 0 {
+		fmt.Println("Stok tidak boleh negatif.")
+		return
+	}
+
+	dataMenu[index].Stok = stokBaru
+
+	fmt.Printf("Stok %s berhasil diubah menjadi %d.\n", dataMenu[index].Nama, dataMenu[index].Stok)
 }
